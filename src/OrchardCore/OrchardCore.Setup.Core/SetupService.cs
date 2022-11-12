@@ -38,6 +38,7 @@ namespace OrchardCore.Setup.Services
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IDbConnectionValidator _dbConnectionValidator;
+        private readonly YesSqlOptions _yesSqlOptions;
         private readonly string _applicationName;
         private IEnumerable<RecipeDescriptor> _recipes;
 
@@ -54,6 +55,7 @@ namespace OrchardCore.Setup.Services
         /// <param name="applicationLifetime">The <see cref="IHostApplicationLifetime"/>.</param>
         /// <param name="httpContextAccessor">The <see cref="IHttpContextAccessor"/>.</param>
         /// <param name="dbConnectionValidator">The <see cref="IDbConnectionValidator"/>.</param>
+        /// <param name="yesSqlOptions">The <see cref="YesSqlOptions"/>.</param>
         public SetupService(
             IShellHost shellHost,
             IHostEnvironment hostingEnvironment,
@@ -64,7 +66,8 @@ namespace OrchardCore.Setup.Services
             IStringLocalizer<SetupService> stringLocalizer,
             IHostApplicationLifetime applicationLifetime,
             IHttpContextAccessor httpContextAccessor,
-            IDbConnectionValidator dbConnectionValidator)
+            IDbConnectionValidator dbConnectionValidator,
+            IOptions<YesSqlOptions> yesSqlOptions)
         {
             _shellHost = shellHost;
             _applicationName = hostingEnvironment.ApplicationName;
@@ -76,6 +79,7 @@ namespace OrchardCore.Setup.Services
             _applicationLifetime = applicationLifetime;
             _httpContextAccessor = httpContextAccessor;
             _dbConnectionValidator = dbConnectionValidator;
+            _yesSqlOptions = yesSqlOptions.Value;
         }
 
         /// <inheritdoc />
