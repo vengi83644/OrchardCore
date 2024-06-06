@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using OrchardCore.Entities;
 using OrchardCore.Google.Analytics.Settings;
 using OrchardCore.Settings;
 
@@ -15,10 +14,7 @@ namespace OrchardCore.Google.Analytics.Services
             _siteService = siteService;
         }
 
-        public async Task<GoogleAnalyticsSettings> GetSettingsAsync()
-        {
-            var container = await _siteService.GetSiteSettingsAsync();
-            return container.As<GoogleAnalyticsSettings>();
-        }
+        public Task<GoogleAnalyticsSettings> GetSettingsAsync()
+            => _siteService.GetSettingsAsync<GoogleAnalyticsSettings>();
     }
 }

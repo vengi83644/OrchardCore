@@ -16,10 +16,10 @@ using OrchardCore.Settings.Deployment;
 
 namespace OrchardCore.ReverseProxy
 {
-    public class Startup : StartupBase
+    public sealed class Startup : StartupBase
     {
-        // we need this to start before other security related initialization logic
-        public override int Order => -1;
+        public override int Order
+            => OrchardCoreConstants.ConfigureOrder.ReverseProxy;
 
         public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         {
@@ -31,7 +31,7 @@ namespace OrchardCore.ReverseProxy
             services.AddScoped<INavigationProvider, AdminMenu>();
             services.AddScoped<IPermissionProvider, Permissions>();
             services.AddScoped<IDisplayDriver<ISite>, ReverseProxySettingsDisplayDriver>();
-            
+
             services.AddSingleton<ReverseProxyService>();
 
             services.TryAddEnumerable(ServiceDescriptor
@@ -40,7 +40,7 @@ namespace OrchardCore.ReverseProxy
     }
 
     [RequireFeatures("OrchardCore.Deployment")]
-    public class DeploymentStartup : StartupBase
+    public sealed class DeploymentStartup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {

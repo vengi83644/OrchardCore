@@ -1,32 +1,23 @@
-using System;
 using Fluid;
 using Fluid.Values;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.Deployment;
-using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
-using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Shortcodes.Controllers;
 using OrchardCore.Shortcodes.Deployment;
 using OrchardCore.Shortcodes.Drivers;
 using OrchardCore.Shortcodes.Providers;
 using OrchardCore.Shortcodes.Recipes;
 using OrchardCore.Shortcodes.Services;
 using OrchardCore.Shortcodes.ViewModels;
-using Shortcodes;
 using Sc = Shortcodes;
 
 namespace OrchardCore.Shortcodes
 {
-    public class Startup : StartupBase
+    public sealed class Startup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {
@@ -34,14 +25,14 @@ namespace OrchardCore.Shortcodes
             {
                 o.MemberAccessStrategy.Register<ShortcodeViewModel>();
 
-                o.MemberAccessStrategy.Register<Context, object>((obj, name) => obj[name]);
+                o.MemberAccessStrategy.Register<Sc.Context, object>((obj, name) => obj[name]);
 
                 o.ValueConverters.Add(x =>
                 {
                     return x switch
                     {
                         // Prevent Context from being converted to an ArrayValue as it implements IEnumerable
-                        Context c => new ObjectValue(c),
+                        Sc.Context c => new ObjectValue(c),
                         // Prevent Arguments from being converted to an ArrayValue as it implements IEnumerable
                         Sc.Arguments a => new ObjectValue(a),
                         _ => null
@@ -57,21 +48,14 @@ namespace OrchardCore.Shortcodes
             services.AddScoped<IShortcodeContextProvider, DefaultShortcodeContextProvider>();
 
             services.AddOptions<ShortcodeOptions>();
-            services.AddScoped<IShortcodeProvider, OptionsShortcodeProvider>();
+            services.AddScoped<Sc.IShortcodeProvider, OptionsShortcodeProvider>();
             services.AddScoped<IDisplayDriver<ShortcodeDescriptor>, ShortcodeDescriptorDisplayDriver>();
         }
     }
 
     [Feature("OrchardCore.Shortcodes.Templates")]
-    public class ShortcodeTemplatesStartup : StartupBase
+    public sealed class ShortcodeTemplatesStartup : StartupBase
     {
-        private readonly AdminOptions _adminOptions;
-
-        public ShortcodeTemplatesStartup(IOptions<AdminOptions> adminOptions)
-        {
-            _adminOptions = adminOptions.Value;
-        }
-
         // Register this first so the templates provide overrides for any code driven shortcodes.
         public override int Order => -10;
 
@@ -83,39 +67,13 @@ namespace OrchardCore.Shortcodes
 
             services.AddRecipeExecutionStep<ShortcodeTemplateStep>();
 
-            services.AddScoped<IShortcodeProvider, TemplateShortcodeProvider>();
+            services.AddScoped<Sc.IShortcodeProvider, TemplateShortcodeProvider>();
             services.AddScoped<IShortcodeDescriptorProvider, ShortcodeTemplatesDescriptorProvider>();
-        }
-
-        public override void Configure(IApplicationBuilder builder, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-        {
-            var templateControllerName = typeof(AdminController).ControllerName();
-
-            routes.MapAreaControllerRoute(
-                name: "Shortcodes.Index",
-                areaName: "OrchardCore.Shortcodes",
-                pattern: _adminOptions.AdminUrlPrefix + "/Shortcodes",
-                defaults: new { controller = templateControllerName, action = nameof(AdminController.Index) }
-            );
-
-            routes.MapAreaControllerRoute(
-                name: "Shortcodes.Create",
-                areaName: "OrchardCore.Shortcodes",
-                pattern: _adminOptions.AdminUrlPrefix + "/Shortcodes/Create",
-                defaults: new { controller = templateControllerName, action = nameof(AdminController.Create) }
-            );
-
-            routes.MapAreaControllerRoute(
-                name: "Shortcodes.Edit",
-                areaName: "OrchardCore.Shortcodes",
-                pattern: _adminOptions.AdminUrlPrefix + "/Shortcodes/Edit/{name}",
-                defaults: new { controller = templateControllerName, action = nameof(AdminController.Edit) }
-            );
         }
     }
 
     [RequireFeatures("OrchardCore.Localization")]
-    public class LocaleShortcodeProviderStartup : StartupBase
+    public sealed class LocaleShortcodeProviderStartup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {
@@ -131,19 +89,17 @@ namespace OrchardCore.Shortcodes
     <td>lang, fallback</td>
   </tr>
 </table>";
-                d.Categories = new string[] { "Localization" };
+                d.Categories = ["Localization"];
             });
         }
     }
 
     [RequireFeatures("OrchardCore.Deployment", "OrchardCore.Shortcodes.Templates")]
-    public class ShortcodeTemplatesDeployementStartup : StartupBase
+    public sealed class ShortcodeTemplatesDeploymentStartup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {
-            services.AddTransient<IDeploymentSource, AllShortcodeTemplatesDeploymentSource>();
-            services.AddSingleton<IDeploymentStepFactory>(new DeploymentStepFactory<AllShortcodeTemplatesDeploymentStep>());
-            services.AddScoped<IDisplayDriver<DeploymentStep>, AllShortcodeTemplatesDeploymentStepDriver>();
+            services.AddDeployment<AllShortcodeTemplatesDeploymentSource, AllShortcodeTemplatesDeploymentStep, AllShortcodeTemplatesDeploymentStepDriver>();
         }
     }
 }

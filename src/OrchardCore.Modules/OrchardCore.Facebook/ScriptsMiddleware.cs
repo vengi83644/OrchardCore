@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using OrchardCore.Entities;
 using OrchardCore.Facebook.Settings;
 using OrchardCore.Settings;
 
@@ -27,8 +26,8 @@ namespace OrchardCore.Facebook
             if (httpContext.Request.Path.StartsWithSegments("/OrchardCore.Facebook/sdk", StringComparison.OrdinalIgnoreCase))
             {
                 var script = default(string);
-                var site = (await _siteService.GetSiteSettingsAsync());
-                var settings = site.As<FacebookSettings>();
+                var settings = await _siteService.GetSettingsAsync<FacebookSettings>();
+
                 if (Path.GetFileName(httpContext.Request.Path.Value) == "fbsdk.js")
                 {
                     var locale = CultureInfo.CurrentUICulture.Name.Replace('-', '_');
@@ -60,7 +59,7 @@ namespace OrchardCore.Facebook
                 {
                     var bytes = Encoding.UTF8.GetBytes(script);
                     var cancellationToken = httpContext?.RequestAborted ?? CancellationToken.None;
-                    await httpContext.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(script), 0, bytes.Length, cancellationToken);
+                    await httpContext.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(script).AsMemory(0, bytes.Length), cancellationToken);
                     return;
                 }
             }

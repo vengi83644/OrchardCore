@@ -1,16 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Principal;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 
 namespace OrchardCore.Tests.Apis.Context
 {
-    internal class PermissionContextAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
+    internal sealed class PermissionContextAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
     {
         private readonly PermissionsContext _permissionsContext;
 
@@ -41,7 +34,7 @@ namespace OrchardCore.Tests.Apis.Context
 
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
         {
-            var permissions = (_permissionsContext.AuthorizedPermissions ?? Enumerable.Empty<Permission>()).ToList();
+            var permissions = (_permissionsContext.AuthorizedPermissions ?? []).ToList();
 
             if (!_permissionsContext.UsePermissionsContext)
             {
@@ -73,7 +66,7 @@ namespace OrchardCore.Tests.Apis.Context
             return Task.CompletedTask;
         }
 
-        private void GetGrantingNamesInternal(Permission permission, HashSet<string> stack)
+        private static void GetGrantingNamesInternal(Permission permission, HashSet<string> stack)
         {
             // The given name is tested
             stack.Add(permission.Name);
@@ -98,12 +91,12 @@ namespace OrchardCore.Tests.Apis.Context
 
     public class PermissionsContext
     {
-        public IEnumerable<Permission> AuthorizedPermissions { get; set; } = Enumerable.Empty<Permission>();
+        public IEnumerable<Permission> AuthorizedPermissions { get; set; } = [];
 
-        public bool UsePermissionsContext { get; set; } = false;
+        public bool UsePermissionsContext { get; set; }
     }
 
-    internal class StubIdentity : IIdentity
+    internal sealed class StubIdentity : IIdentity
     {
         public string AuthenticationType => "TEST TEST";
 

@@ -1,15 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Logging;
-using Moq;
+using System.Text.Json.Nodes;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Builders;
-using OrchardCore.Environment.Shell.Models;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
@@ -17,7 +8,7 @@ using OrchardCore.Recipes.Events;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Scripting;
-using Xunit;
+using OrchardCore.Tests.Apis.Context;
 
 namespace OrchardCore.Recipes
 {
@@ -29,9 +20,9 @@ namespace OrchardCore.Recipes
         [InlineData("recipe3", "js: valiables('now')")]
         [InlineData("recipe4", "[locale en]This text contains a colon ':' symbol[/locale][locale fr]Ce texte contient un deux-points ':'[/locale]")]
         [InlineData("recipe5", "[sc text='some : text'/]")]
-        public Task ShouldTrimValidScriptExpression(string recipeName, string expected)
+        public async Task ShouldTrimValidScriptExpression(string recipeName, string expected)
         {
-            return CreateShellContext().CreateScope().UsingAsync(async scope =>
+            await (await CreateShellContext().CreateScopeAsync()).UsingAsync(async scope =>
             {
                 // Arrange
                 var shellHostMock = new Mock<IShellHost>();
@@ -41,11 +32,17 @@ namespace OrchardCore.Recipes
 
                 var recipeEventHandlers = new List<IRecipeEventHandler> { new RecipeEventHandler() };
                 var loggerMock = new Mock<ILogger<RecipeExecutor>>();
+                var localizerMock = new Mock<IStringLocalizer<RecipeExecutor>>();
+
+                localizerMock.Setup(localizer => localizer[It.IsAny<string>()])
+                .Returns((string name) => new LocalizedString(name, name));
+
                 var recipeExecutor = new RecipeExecutor(
                     shellHostMock.Object,
                     scope.ShellContext.Settings,
                     recipeEventHandlers,
-                    loggerMock.Object);
+                    loggerMock.Object,
+                    localizerMock.Object);
 
                 // Act
                 var executionId = Guid.NewGuid().ToString("n");
@@ -54,19 +51,41 @@ namespace OrchardCore.Recipes
 
                 // Assert
                 var recipeStep = (recipeEventHandlers.Single() as RecipeEventHandler).Context.Step;
-                Assert.Equal(expected, recipeStep.SelectToken("data.[0].TitlePart.Title").ToString());
+
+                Assert.Equal(expected, recipeStep.SelectNode("data[0].TitlePart.Title").ToString());
             });
         }
 
-        private static Task<ShellScope> GetScopeAsync() => Task.FromResult(ShellScope.Context.CreateScope());
-
-        private static ShellContext CreateShellContext() => new ShellContext()
+        [Fact]
+        public async Task ContentDefinitionStep_WhenPartNameIsMissing_RecipeExecutionException()
         {
-            Settings = new ShellSettings() { Name = ShellHelper.DefaultShellName, State = TenantState.Running },
+            var context = new BlogContext();
+            await context.InitializeAsync();
+            await context.UsingTenantScopeAsync(async scope =>
+            {
+                var recipeExecutor = scope.ServiceProvider.GetRequiredService<IRecipeExecutor>();
+                // Act
+                var executionId = Guid.NewGuid().ToString("n");
+                var recipeDescriptor = new RecipeDescriptor { RecipeFileInfo = GetRecipeFileInfo("recipe6") };
+
+                var exception = await Assert.ThrowsAsync<RecipeExecutionException>(async () =>
+                {
+                    await recipeExecutor.ExecuteAsync(executionId, recipeDescriptor, new Dictionary<string, object>(), CancellationToken.None);
+                });
+
+                Assert.Contains("Unable to add content-part to the 'Message' content-type. The part name cannot be null or empty.", exception.StepResult.Errors);
+            });
+        }
+
+        private static Task<ShellScope> GetScopeAsync() => ShellScope.Context.CreateScopeAsync();
+
+        private static ShellContext CreateShellContext() => new()
+        {
+            Settings = new ShellSettings().AsDefaultShell().AsRunning(),
             ServiceProvider = CreateServiceProvider(),
         };
 
-        private static IServiceProvider CreateServiceProvider() => new ServiceCollection()
+        private static ServiceProvider CreateServiceProvider() => new ServiceCollection()
             .AddScripting()
             .AddSingleton<IDistributedLock, LocalLock>()
             .AddLogging()
@@ -80,13 +99,13 @@ namespace OrchardCore.Recipes
             return new EmbeddedFileProvider(assembly).GetFileInfo(path);
         }
 
-        private class RecipeEventHandler : IRecipeEventHandler
+        private sealed class RecipeEventHandler : IRecipeEventHandler
         {
             public RecipeExecutionContext Context { get; private set; }
 
             public Task RecipeStepExecutedAsync(RecipeExecutionContext context)
             {
-                if (String.Equals(context.Name, "Content", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(context.Name, "Content", StringComparison.OrdinalIgnoreCase))
                 {
                     Context = context;
                 }

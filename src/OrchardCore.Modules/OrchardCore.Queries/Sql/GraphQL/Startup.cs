@@ -6,11 +6,11 @@ using OrchardCore.Queries.Sql.GraphQL.Queries;
 namespace OrchardCore.Queries.Sql.GraphQL
 {
     /// <summary>
-    /// These services are registered on the tenant service collection
+    /// These services are registered on the tenant service collection.
     /// </summary>
     [Feature("OrchardCore.Queries.Sql")]
     [RequireFeatures("OrchardCore.Apis.GraphQL")]
-    public class Startup : StartupBase
+    public sealed class Startup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {

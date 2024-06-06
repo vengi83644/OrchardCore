@@ -4,7 +4,7 @@ using OrchardCore.Environment.Shell.Configuration;
 
 namespace OrchardCore.Environment.Shell.Builders
 {
-    public class ShellContextOptionsSetup : IConfigureOptions<ShellContextOptions>
+    public sealed class ShellContextOptionsSetup : IConfigureOptions<ShellContextOptions>
     {
         private readonly IShellConfiguration _shellConfiguration;
 
@@ -26,6 +26,16 @@ namespace OrchardCore.Environment.Shell.Builders
             if (options.ShellActivateLockExpiration <= 0)
             {
                 options.ShellActivateLockExpiration = 30_000;
+            }
+
+            if (options.ShellRemovingLockTimeout <= 0)
+            {
+                options.ShellRemovingLockTimeout = 1_000;
+            }
+
+            if (options.ShellRemovingLockExpiration <= 0)
+            {
+                options.ShellRemovingLockExpiration = 60_000;
             }
         }
     }

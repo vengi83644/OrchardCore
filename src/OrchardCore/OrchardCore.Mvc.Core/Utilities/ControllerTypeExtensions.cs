@@ -7,13 +7,13 @@ namespace OrchardCore.Mvc.Core.Utilities
     {
         public static string ControllerName(this Type controllerType)
         {
-            if (!typeof(Controller).IsAssignableFrom(controllerType))
+            if (!typeof(ControllerBase).IsAssignableFrom(controllerType))
             {
-                throw new ArgumentException("The specified type must inherit from " + nameof(Controller), nameof(controllerType));
+                throw new ArgumentException($"The specified type must inherit from '{nameof(ControllerBase)}'", nameof(controllerType));
             }
 
             return controllerType.Name.EndsWith(nameof(Controller), StringComparison.OrdinalIgnoreCase)
-                ? controllerType.Name.Substring(0, controllerType.Name.Length - nameof(Controller).Length)
+                ? controllerType.Name[..^nameof(Controller).Length]
                 : controllerType.Name;
         }
     }

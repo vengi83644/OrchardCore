@@ -9,7 +9,7 @@ namespace OrchardCore.DisplayManagement.Descriptors.ShapeTemplateStrategy
     /// <summary>
     /// Sets up default options for <see cref="ShapeTemplateOptions"/>.
     /// </summary>
-    public class ShapeTemplateOptionsSetup : IConfigureOptions<ShapeTemplateOptions>
+    public sealed class ShapeTemplateOptionsSetup : IConfigureOptions<ShapeTemplateOptions>
     {
         private readonly IHostEnvironment _hostingEnvironment;
         private readonly IApplicationContext _applicationContext;
@@ -21,7 +21,9 @@ namespace OrchardCore.DisplayManagement.Descriptors.ShapeTemplateStrategy
         /// <param name="applicationContext"><see cref="IApplicationContext"/> for the application.</param>
         public ShapeTemplateOptionsSetup(IHostEnvironment hostingEnvironment, IApplicationContext applicationContext)
         {
-            _hostingEnvironment = hostingEnvironment ?? throw new ArgumentNullException(nameof(hostingEnvironment));
+            ArgumentNullException.ThrowIfNull(hostingEnvironment);
+
+            _hostingEnvironment = hostingEnvironment;
             _applicationContext = applicationContext;
         }
 

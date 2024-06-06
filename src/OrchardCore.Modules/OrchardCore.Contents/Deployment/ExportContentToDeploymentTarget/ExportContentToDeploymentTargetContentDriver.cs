@@ -3,7 +3,6 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.ViewModels;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Settings;
 
 namespace OrchardCore.Contents.Deployment.ExportContentToDeploymentTarget
@@ -30,8 +29,8 @@ namespace OrchardCore.Contents.Deployment.ExportContentToDeploymentTarget
                     {
                         if (await _deploymentPlanService.DoesUserHaveExportPermissionAsync())
                         {
-                            var siteSettings = await _siteService.GetSiteSettingsAsync();
-                            var exportContentToDeploymentTargetSettings = siteSettings.As<ExportContentToDeploymentTargetSettings>();
+                            var exportContentToDeploymentTargetSettings = await _siteService.GetSettingsAsync<ExportContentToDeploymentTargetSettings>();
+
                             if (exportContentToDeploymentTargetSettings.ExportContentToDeploymentTargetPlanId != 0)
                             {
                                 return true;
@@ -46,8 +45,8 @@ namespace OrchardCore.Contents.Deployment.ExportContentToDeploymentTarget
                     {
                         if (await _deploymentPlanService.DoesUserHaveExportPermissionAsync())
                         {
-                            var siteSettings = await _siteService.GetSiteSettingsAsync();
-                            var exportContentToDeploymentTargetSettings = siteSettings.As<ExportContentToDeploymentTargetSettings>();
+                            var exportContentToDeploymentTargetSettings = await _siteService.GetSettingsAsync<ExportContentToDeploymentTargetSettings>();
+
                             if (exportContentToDeploymentTargetSettings.ExportContentToDeploymentTargetPlanId != 0)
                             {
                                 return true;

@@ -1,54 +1,43 @@
 using System;
 using System.IO;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.FileStorage;
 using OrchardCore.FileStorage.AzureBlob;
+using OrchardCore.Media.Azure.Services;
 using OrchardCore.Media.Core;
 using OrchardCore.Media.Core.Events;
 using OrchardCore.Media.Events;
 using OrchardCore.Modules;
-using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using SixLabors.ImageSharp.Web.Caching;
+using SixLabors.ImageSharp.Web.Caching.Azure;
 
 namespace OrchardCore.Media.Azure
 {
     [Feature("OrchardCore.Media.Azure.Storage")]
-    public class Startup : Modules.StartupBase
+    public sealed class Startup : Modules.StartupBase
     {
-        private readonly AdminOptions _adminOptions;
         private readonly ILogger _logger;
         private readonly IShellConfiguration _configuration;
 
-        public Startup(IOptions<AdminOptions> adminOptions, ILogger<Startup> logger, IShellConfiguration configuration)
+        public Startup(ILogger<Startup> logger, IShellConfiguration configuration)
         {
-            _adminOptions = adminOptions.Value;
             _logger = logger;
             _configuration = configuration;
         }
 
-        public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-        {
-            routes.MapAreaControllerRoute(
-                name: "AzureBlob.Options",
-                areaName: "OrchardCore.Media.Azure",
-                pattern: _adminOptions.AdminUrlPrefix + "/MediaAzureBlob/Options",
-                defaults: new { controller = typeof(AdminController).ControllerName(), action = nameof(AdminController.Options) }
-            );
-        }
-
-        public override int Order => 10;
+        public override int Order
+            => OrchardCoreConstants.ConfigureOrder.AzureMediaStorage;
 
         public override void ConfigureServices(IServiceCollection services)
         {
@@ -57,8 +46,9 @@ namespace OrchardCore.Media.Azure
             services.AddTransient<IConfigureOptions<MediaBlobStorageOptions>, MediaBlobStorageOptionsConfiguration>();
 
             // Only replace default implementation if options are valid.
-            var connectionString = _configuration[$"OrchardCore_Media_Azure:{nameof(MediaBlobStorageOptions.ConnectionString)}"];
-            var containerName = _configuration[$"OrchardCore_Media_Azure:{nameof(MediaBlobStorageOptions.ContainerName)}"];
+            var section = _configuration.GetSection("OrchardCore_Media_Azure");
+            var connectionString = section.GetValue<string>(nameof(MediaBlobStorageOptions.ConnectionString));
+            var containerName = section.GetValue<string>(nameof(MediaBlobStorageOptions.ContainerName));
 
             if (CheckOptions(connectionString, containerName, _logger))
             {
@@ -67,7 +57,7 @@ namespace OrchardCore.Media.Azure
                 {
                     var hostingEnvironment = serviceProvider.GetRequiredService<IWebHostEnvironment>();
 
-                    if (String.IsNullOrWhiteSpace(hostingEnvironment.WebRootPath))
+                    if (string.IsNullOrWhiteSpace(hostingEnvironment.WebRootPath))
                     {
                         throw new MediaConfigurationException("The wwwroot folder for serving cache media files is missing.");
                     }
@@ -77,7 +67,8 @@ namespace OrchardCore.Media.Azure
                     var shellSettings = serviceProvider.GetRequiredService<ShellSettings>();
                     var logger = serviceProvider.GetRequiredService<ILogger<DefaultMediaFileStoreCacheFileProvider>>();
 
-                    var mediaCachePath = GetMediaCachePath(hostingEnvironment, DefaultMediaFileStoreCacheFileProvider.AssetsCachePath, shellSettings);
+                    var mediaCachePath = GetMediaCachePath(
+                        hostingEnvironment, shellSettings, DefaultMediaFileStoreCacheFileProvider.AssetsCachePath);
 
                     if (!Directory.Exists(mediaCachePath))
                     {
@@ -109,13 +100,11 @@ namespace OrchardCore.Media.Azure
                     var logger = serviceProvider.GetRequiredService<ILogger<DefaultMediaFileStore>>();
 
                     var fileStore = new BlobFileStore(blobStorageOptions, clock, contentTypeProvider);
-
-                    var mediaPath = GetMediaPath(shellOptions.Value, shellSettings, mediaOptions.AssetsPath);
-
                     var mediaUrlBase = "/" + fileStore.Combine(shellSettings.RequestUrlPrefix, mediaOptions.AssetsRequestPath);
 
-                    var originalPathBase = serviceProvider.GetRequiredService<IHttpContextAccessor>()
-                        .HttpContext?.Features.Get<ShellContextFeature>()?.OriginalPathBase ?? null;
+                    var originalPathBase = serviceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext
+                        ?.Features.Get<ShellContextFeature>()
+                        ?.OriginalPathBase ?? PathString.Empty;
 
                     if (originalPathBase.HasValue)
                     {
@@ -127,33 +116,88 @@ namespace OrchardCore.Media.Azure
 
                 services.AddSingleton<IMediaEventHandler, DefaultMediaFileStoreCacheEventHandler>();
 
-                services.AddScoped<IModularTenantEvents, CreateMediaBlobContainerEvent>();
+                services.AddScoped<IModularTenantEvents, MediaBlobContainerTenantEvents>();
             }
         }
 
-        private string GetMediaPath(ShellOptions shellOptions, ShellSettings shellSettings, string assetsPath)
-        {
-            return PathExtensions.Combine(shellOptions.ShellsApplicationDataPath, shellOptions.ShellsContainerName, shellSettings.Name, assetsPath);
-        }
-
-        private string GetMediaCachePath(IWebHostEnvironment hostingEnvironment, string assetsPath, ShellSettings shellSettings)
-        {
-            return PathExtensions.Combine(hostingEnvironment.WebRootPath, assetsPath, shellSettings.Name);
-        }
+        private static string GetMediaCachePath(IWebHostEnvironment hostingEnvironment, ShellSettings shellSettings, string assetsPath)
+            => PathExtensions.Combine(hostingEnvironment.WebRootPath, shellSettings.Name, assetsPath);
 
         private static bool CheckOptions(string connectionString, string containerName, ILogger logger)
         {
             var optionsAreValid = true;
 
-            if (String.IsNullOrWhiteSpace(connectionString))
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
                 logger.LogError("Azure Media Storage is enabled but not active because the 'ConnectionString' is missing or empty in application configuration.");
                 optionsAreValid = false;
             }
 
-            if (String.IsNullOrWhiteSpace(containerName))
+            if (string.IsNullOrWhiteSpace(containerName))
             {
                 logger.LogError("Azure Media Storage is enabled but not active because the 'ContainerName' is missing or empty in application configuration.");
+                optionsAreValid = false;
+            }
+
+            return optionsAreValid;
+        }
+    }
+
+    [Feature("OrchardCore.Media.Azure.ImageSharpImageCache")]
+    public sealed class ImageSharpAzureBlobCacheStartup : Modules.StartupBase
+    {
+        private readonly IShellConfiguration _configuration;
+        private readonly ILogger _logger;
+
+        public ImageSharpAzureBlobCacheStartup(
+            IShellConfiguration configuration,
+            ILogger<ImageSharpAzureBlobCacheStartup> logger)
+        {
+            _configuration = configuration;
+            _logger = logger;
+        }
+
+        public override int Order
+            => OrchardCoreConstants.ConfigureOrder.AzureImageSharpCache;
+
+        public override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddTransient<IConfigureOptions<ImageSharpBlobImageCacheOptions>, ImageSharpBlobImageCacheOptionsConfiguration>();
+            services.AddTransient<IConfigureOptions<AzureBlobStorageCacheOptions>, AzureBlobStorageCacheOptionsConfiguration>();
+
+            // Only replace default implementation if options are valid.
+            var section = _configuration.GetSection("OrchardCore_Media_Azure_ImageSharp_Cache");
+            var connectionString = section.GetValue<string>(nameof(MediaBlobStorageOptions.ConnectionString));
+            var containerName = section.GetValue<string>(nameof(MediaBlobStorageOptions.ContainerName));
+
+            if (!CheckOptions(connectionString, containerName))
+            {
+                return;
+            }
+
+            // Following https://docs.sixlabors.com/articles/imagesharp.web/imagecaches.html we'd use
+            // SetCache<AzureBlobStorageCache>() but that's only available on IImageSharpBuilder after AddImageSharp(),
+            // what happens in OrchardCore.Media. Thus, an explicit Replace() is necessary.
+            services.Replace(ServiceDescriptor.Singleton<IImageCache, AzureBlobStorageCache>());
+
+            services.AddScoped<IModularTenantEvents, ImageSharpBlobImageCacheTenantEvents>();
+        }
+
+        private bool CheckOptions(string connectionString, string containerName)
+        {
+            var optionsAreValid = true;
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                _logger.LogError(
+                    "Azure Media ImageSharp Image Cache is enabled but not active because the 'ConnectionString' is missing or empty in application configuration.");
+                optionsAreValid = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(containerName))
+            {
+                _logger.LogError(
+                    "Azure Media ImageSharp Image Cache is enabled but not active because the 'ContainerName' is missing or empty in application configuration.");
                 optionsAreValid = false;
             }
 

@@ -18,7 +18,7 @@ using OrchardCore.Settings;
 namespace OrchardCore.Facebook
 {
     [Feature(FacebookConstants.Features.Login)]
-    public class StartupLogin : StartupBase
+    public sealed class StartupLogin : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {
@@ -48,9 +48,7 @@ namespace OrchardCore.Facebook
     {
         public override void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<IDisplayDriver<DeploymentStep>, FacebookLoginDeploymentStepDriver>();
-            services.AddTransient<IDeploymentSource, FacebookLoginDeploymentSource>();
-            services.AddSingleton<IDeploymentStepFactory, DeploymentStepFactory<FacebookLoginDeploymentStep>>();
+            services.AddDeployment<FacebookLoginDeploymentSource, FacebookLoginDeploymentStep, FacebookLoginDeploymentStepDriver>();
         }
     }
 }

@@ -5,7 +5,7 @@ using OrchardCore.Modules;
 
 namespace Module.Pages
 {
-    public class Startup : StartupBase
+    public sealed class Startup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {
@@ -15,10 +15,10 @@ namespace Module.Pages
                 options.Conventions.AddAreaFolderRoute("Module.Pages", "/", "");
 
                 // Add a custom page route
-                //options.Conventions.AddAreaPageRoute("Module.Pages", "/Foo", "Foo");
+                // options.Conventions.AddAreaPageRoute("Module.Pages", "/Foo", "Foo");
 
                 // This declaration would define an home page
-                //options.Conventions.AddAreaPageRoute("Module.Pages", "/Foo", "");
+                // options.Conventions.AddAreaPageRoute("Module.Pages", "/Foo", "");
             });
         }
     }

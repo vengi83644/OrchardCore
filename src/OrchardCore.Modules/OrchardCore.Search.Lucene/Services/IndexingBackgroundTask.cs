@@ -12,8 +12,11 @@ namespace OrchardCore.Search.Lucene
     /// <remarks>
     /// This services is only registered from OrchardCore.Search.Lucene.Worker feature.
     /// </remarks>
-    [BackgroundTask(Schedule = "* * * * *", Description = "Update lucene indexes.")]
-    public class IndexingBackgroundTask : IBackgroundTask
+    [BackgroundTask(
+        Title = "Lucene Indexes Updater",
+        Schedule = "* * * * *",
+        Description = "Updates lucene indexes.")]
+    public sealed class IndexingBackgroundTask : IBackgroundTask
     {
         public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {

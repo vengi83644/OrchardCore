@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentLocalization.Models;
 using OrchardCore.ContentLocalization.Services;
-using OrchardCore.Entities;
 using OrchardCore.Settings;
 
 namespace OrchardCore.ContentLocalization
@@ -17,10 +16,7 @@ namespace OrchardCore.ContentLocalization
     {
         public override async Task<ProviderCultureResult> DetermineProviderCultureResult(HttpContext httpContext)
         {
-            if (httpContext == null)
-            {
-                throw new ArgumentNullException(nameof(httpContext));
-            }
+            ArgumentNullException.ThrowIfNull(httpContext);
 
             var culturePickerService = httpContext.RequestServices.GetService<IContentCulturePickerService>();
             var siteService = httpContext.RequestServices.GetService<ISiteService>();
@@ -28,7 +24,7 @@ namespace OrchardCore.ContentLocalization
 
             if (localization != null)
             {
-                var settings = (await siteService.GetSiteSettingsAsync()).As<ContentRequestCultureProviderSettings>();
+                var settings = await siteService.GetSettingsAsync<ContentRequestCultureProviderSettings>();
                 if (settings.SetCookie)
                 {
                     culturePickerService.SetContentCulturePickerCookie(localization.Culture);
@@ -37,7 +33,7 @@ namespace OrchardCore.ContentLocalization
                 return new ProviderCultureResult(localization.Culture);
             }
 
-            return null;
+            return default;
         }
     }
 }

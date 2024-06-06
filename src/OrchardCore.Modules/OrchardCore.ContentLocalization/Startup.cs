@@ -1,14 +1,11 @@
 using System;
-using System.Globalization;
 using Fluid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
-using OrchardCore.ContentLocalization.Controllers;
+using OrchardCore.Admin.Models;
 using OrchardCore.ContentLocalization.Drivers;
 using OrchardCore.ContentLocalization.Indexing;
 using OrchardCore.ContentLocalization.Liquid;
@@ -23,7 +20,6 @@ using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Indexing;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
-using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
@@ -31,20 +27,13 @@ using OrchardCore.Sitemaps.Builders;
 
 namespace OrchardCore.ContentLocalization
 {
-    public class Startup : StartupBase
+    public sealed class Startup : StartupBase
     {
-        private readonly AdminOptions _adminOptions;
-        public Startup(IOptions<AdminOptions> adminOptions)
-        {
-            _adminOptions = adminOptions.Value;
-        }
-
         public override void ConfigureServices(IServiceCollection services)
         {
             services.Configure<TemplateOptions>(o =>
             {
                 o.MemberAccessStrategy.Register<LocalizationPartViewModel>();
-                o.MemberAccessStrategy.Register<CultureInfo>();
             })
             .AddLiquidFilter<ContentLocalizationFilter>("localization_set");
 
@@ -59,20 +48,10 @@ namespace OrchardCore.ContentLocalization
             services.AddTransient<IContentsAdminListFilterProvider, LocalizationPartContentsAdminListFilterProvider>();
             services.AddScoped<IDisplayDriver<ContentOptionsViewModel>, LocalizationContentsAdminListDisplayDriver>();
         }
-
-        public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-        {
-            routes.MapAreaControllerRoute(
-                name: "ContentLocalization.Localize",
-                areaName: "OrchardCore.ContentLocalization",
-                pattern: _adminOptions.AdminUrlPrefix + "/ContentLocalization",
-                defaults: new { controller = typeof(AdminController).ControllerName(), action = nameof(AdminController.Localize) }
-            );
-        }
     }
 
     [Feature("OrchardCore.ContentLocalization.ContentCulturePicker")]
-    public class ContentPickerStartup : StartupBase
+    public sealed class ContentPickerStartup : StartupBase
     {
         private readonly IShellConfiguration _shellConfiguration;
         public ContentPickerStartup(IShellConfiguration shellConfiguration)
@@ -82,6 +61,7 @@ namespace OrchardCore.ContentLocalization
 
         public override void ConfigureServices(IServiceCollection services)
         {
+            services.AddScoped<IDisplayDriver<Navbar>, ContentCulturePickerNavbarDisplayDriver>();
             services.AddLiquidFilter<SwitchCultureUrlFilter>("switch_culture_url");
             services.AddScoped<INavigationProvider, AdminMenu>();
             services.AddScoped<IContentCulturePickerService, ContentCulturePickerService>();
@@ -103,7 +83,7 @@ namespace OrchardCore.ContentLocalization
     }
 
     [Feature("OrchardCore.ContentLocalization.Sitemaps")]
-    public class SitemapsStartup : StartupBase
+    public sealed class SitemapsStartup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {

@@ -3,11 +3,12 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 using OrchardCore.Media.Settings;
+using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
 
 namespace OrchardCore.Seo
 {
-    public class Migrations : DataMigration
+    public sealed class Migrations : DataMigration
     {
         private readonly IContentDefinitionManager _contentDefinitionManager;
         private readonly IRecipeMigrator _recipeMigrator;
@@ -18,9 +19,9 @@ namespace OrchardCore.Seo
             _recipeMigrator = recipeMigrator;
         }
 
-        public int Create()
+        public async Task<int> CreateAsync()
         {
-            _contentDefinitionManager.AlterPartDefinition("SeoMetaPart", builder => builder
+            await _contentDefinitionManager.AlterPartDefinitionAsync("SeoMetaPart", builder => builder
                 .Attachable()
                 .WithDescription("Provides a part that allows SEO meta descriptions to be applied to a content item.")
                 .WithField("DefaultSocialImage", field => field
@@ -37,12 +38,14 @@ namespace OrchardCore.Seo
                     .WithSettings(new MediaFieldSettings { Multiple = false }))
             );
 
-            return 1;
+            await _recipeMigrator.ExecuteAsync("socialmetasettings.recipe.json", this);
+
+            return 2;
         }
 
         public async Task<int> UpdateFrom1Async()
         {
-            await _recipeMigrator.ExecuteAsync("socialmetasettings.recipe.json", this);
+            await _recipeMigrator.ExecuteAsync($"socialmetasettings{RecipesConstants.RecipeExtension}", this);
 
             return 2;
         }

@@ -4,7 +4,7 @@ using OrchardCore.Modules;
 
 namespace OrchardCore.BackgroundTasks
 {
-    public class BackgroundTaskScheduler
+    public sealed class BackgroundTaskScheduler
     {
         private readonly IClock _clock;
 
@@ -39,7 +39,6 @@ namespace OrchardCore.BackgroundTasks
             }
 
             var nextStartTime = CrontabSchedule.Parse(Settings.Schedule).GetNextOccurrence(referenceTime);
-
             if (now >= nextStartTime)
             {
                 if (Settings.Enable && !Released && Updated)

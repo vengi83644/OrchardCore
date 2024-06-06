@@ -1,3 +1,4 @@
+using GraphQL.Resolvers;
 using GraphQL.Types;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.GraphQL;
@@ -9,17 +10,19 @@ namespace OrchardCore.Menu.GraphQL
 {
     public class MenuItemContentTypeBuilder : IContentTypeBuilder
     {
-        public void Build(FieldType contentQuery, ContentTypeDefinition contentTypeDefinition, ContentItemType contentItemType)
+        public void Build(ISchema schema, FieldType contentQuery, ContentTypeDefinition contentTypeDefinition, ContentItemType contentItemType)
         {
             if (contentTypeDefinition.GetStereotype() != "MenuItem")
             {
                 return;
             }
 
-            contentItemType.Field<MenuItemsListQueryObjectType>(
-                nameof(MenuItemsListPart).ToFieldName(),
-                resolve: context => context.Source.As<MenuItemsListPart>()
-            );
+            contentItemType.AddField(new FieldType
+            {
+                Type = typeof(MenuItemsListQueryObjectType),
+                Name = nameof(MenuItemsListPart).ToFieldName(),
+                Resolver = new FuncFieldResolver<ContentItem, MenuItemsListPart>(context => context.Source.As<MenuItemsListPart>())
+            });
 
             contentItemType.Interface<MenuItemInterface>();
         }

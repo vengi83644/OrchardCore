@@ -1,37 +1,34 @@
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using OrchardCore.Deployment;
-using OrchardCore.Entities;
-using OrchardCore.Search.Model;
+using OrchardCore.Search.Models;
 using OrchardCore.Settings;
 
 namespace OrchardCore.Search.Deployment
 {
     public class SearchSettingsDeploymentSource : IDeploymentSource
     {
-        private readonly ISiteService _site;
+        private readonly ISiteService _siteService;
 
         public SearchSettingsDeploymentSource(ISiteService site)
         {
-            _site = site;
+            _siteService = site;
         }
 
         public async Task ProcessDeploymentStepAsync(DeploymentStep step, DeploymentPlanResult result)
         {
-            var searchSettingsStep = step as SearchSettingsDeploymentStep;
-
-            if (searchSettingsStep == null)
+            if (step is not SearchSettingsDeploymentStep)
             {
                 return;
             }
 
-            var settings = await _site.GetSiteSettingsAsync();
-            var searchSettings = settings.As<SearchSettings>();
+            var searchSettings = await _siteService.GetSettingsAsync<SearchSettings>();
 
-            result.Steps.Add(new JObject(
-                new JProperty("name", "Settings"),
-                new JProperty("SearchSettings", JObject.FromObject(searchSettings))
-            ));
+            result.Steps.Add(new JsonObject
+            {
+                ["name"] = "Settings",
+                ["SearchSettings"] = JObject.FromObject(searchSettings),
+            });
         }
     }
 }

@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Text.Json.Nodes;
 using Jint;
+using Jint.Native;
+using Jint.Runtime.Interop;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.FileProviders;
 

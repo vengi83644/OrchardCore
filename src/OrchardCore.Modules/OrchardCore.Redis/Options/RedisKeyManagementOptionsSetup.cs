@@ -5,7 +5,7 @@ using OrchardCore.Environment.Shell;
 
 namespace OrchardCore.Redis.Options
 {
-    public class RedisKeyManagementOptionsSetup : IConfigureOptions<KeyManagementOptions>
+    public sealed class RedisKeyManagementOptionsSetup : IConfigureOptions<KeyManagementOptions>
     {
         private readonly IRedisService _redis;
         private readonly string _tenant;
@@ -19,7 +19,6 @@ namespace OrchardCore.Redis.Options
         public void Configure(KeyManagementOptions options)
         {
             var redis = _redis;
-
             options.XmlRepository = new RedisXmlRepository(() =>
             {
                 if (redis.Database == null)
@@ -28,8 +27,8 @@ namespace OrchardCore.Redis.Options
                 }
 
                 return redis.Database;
-            }
-            , redis.InstancePrefix + _tenant + ":DataProtection-Keys");
+            },
+            $"({redis.InstancePrefix}{_tenant}:DataProtection-Keys");
         }
     }
 }

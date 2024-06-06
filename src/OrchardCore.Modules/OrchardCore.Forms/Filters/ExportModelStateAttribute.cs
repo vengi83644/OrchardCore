@@ -5,7 +5,7 @@ using OrchardCore.Forms.Helpers;
 
 namespace OrchardCore.Forms.Filters
 {
-    public class ExportModelStateAttribute : ModelStateTransferAttribute
+    public sealed class ExportModelStateAttribute : ModelStateTransferAttribute
     {
         public override void OnActionExecuted(ActionExecutedContext context)
         {
@@ -22,7 +22,7 @@ namespace OrchardCore.Forms.Filters
             base.OnActionExecuted(context);
         }
 
-        private bool IsRedirect(ActionExecutedContext context)
+        private static bool IsRedirect(ActionExecutedContext context)
         {
             var result = context.Result;
             var statusCode = context.HttpContext.Response.StatusCode;

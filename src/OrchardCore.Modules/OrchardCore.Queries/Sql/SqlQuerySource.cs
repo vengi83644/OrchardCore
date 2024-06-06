@@ -1,13 +1,17 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Dapper;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.Data;
+using OrchardCore.Json;
 using OrchardCore.Liquid;
 using YesSql;
 
@@ -18,17 +22,20 @@ namespace OrchardCore.Queries.Sql
         private readonly ILiquidTemplateManager _liquidTemplateManager;
         private readonly IDbConnectionAccessor _dbConnectionAccessor;
         private readonly ISession _session;
+        private readonly JsonSerializerOptions _jsonSerializerOptions;
         private readonly TemplateOptions _templateOptions;
 
         public SqlQuerySource(
             ILiquidTemplateManager liquidTemplateManager,
             IDbConnectionAccessor dbConnectionAccessor,
             ISession session,
+            IOptions<DocumentJsonSerializerOptions> jsonSerializerOptions,
             IOptions<TemplateOptions> templateOptions)
         {
             _liquidTemplateManager = liquidTemplateManager;
             _dbConnectionAccessor = dbConnectionAccessor;
             _session = session;
+            _jsonSerializerOptions = jsonSerializerOptions.Value.SerializerOptions;
             _templateOptions = templateOptions.Value;
         }
 
@@ -47,52 +54,66 @@ namespace OrchardCore.Queries.Sql
             var tokenizedQuery = await _liquidTemplateManager.RenderStringAsync(sqlQuery.Template, NullEncoder.Default,
                 parameters.Select(x => new KeyValuePair<string, FluidValue>(x.Key, FluidValue.Create(x.Value, _templateOptions))));
 
-            var connection = _dbConnectionAccessor.CreateConnection();
             var dialect = _session.Store.Configuration.SqlDialect;
 
             if (!SqlParser.TryParse(tokenizedQuery, _session.Store.Configuration.Schema, dialect, _session.Store.Configuration.TablePrefix, parameters, out var rawQuery, out var messages))
             {
-                sqlQueryResults.Items = new object[0];
-                connection.Dispose();
+                sqlQueryResults.Items = Array.Empty<object>();
+
                 return sqlQueryResults;
             }
 
+            await using var connection = _dbConnectionAccessor.CreateConnection();
+
+            await connection.OpenAsync();
+
             if (sqlQuery.ReturnDocuments)
             {
-                IEnumerable<int> documentIds;
+                IEnumerable<long> documentIds;
 
-                using (connection)
+                using var transaction = await connection.BeginTransactionAsync(_session.Store.Configuration.IsolationLevel);
+                var queryResult = await connection.QueryAsync(rawQuery, parameters, transaction);
+
+                string column = null;
+
+                documentIds = queryResult.Select(row =>
                 {
-                    await connection.OpenAsync();
+                    var rowDictionary = (IDictionary<string, object>)row;
 
-                    using (var transaction = connection.BeginTransaction(_session.Store.Configuration.IsolationLevel))
+                    if (column == null)
                     {
-                        documentIds = await connection.QueryAsync<int>(rawQuery, parameters, transaction);
+                        if (rowDictionary.ContainsKey(nameof(ContentItemIndex.DocumentId)))
+                        {
+                            column = nameof(ContentItemIndex.DocumentId);
+                        }
+                        else
+                        {
+                            column = rowDictionary
+                                .FirstOrDefault(kv => kv.Value is long).Key
+                                ?? rowDictionary.First().Key;
+                        }
                     }
-                }
+
+                    return rowDictionary.TryGetValue(column, out var documentIdObject) && documentIdObject is long documentId
+                        ? documentId
+                        : 0;
+                });
 
                 sqlQueryResults.Items = await _session.GetAsync<ContentItem>(documentIds.ToArray());
+
                 return sqlQueryResults;
             }
             else
             {
                 IEnumerable<dynamic> queryResults;
 
-                using (connection)
-                {
-                    await connection.OpenAsync();
+                using var transaction = await connection.BeginTransactionAsync(_session.Store.Configuration.IsolationLevel);
+                queryResults = await connection.QueryAsync(rawQuery, parameters, transaction);
 
-                    using (var transaction = connection.BeginTransaction(_session.Store.Configuration.IsolationLevel))
-                    {
-                        queryResults = await connection.QueryAsync(rawQuery, parameters, transaction);
-                    }
-                }
-
-                var results = new List<JObject>();
-
+                var results = new List<JsonObject>();
                 foreach (var document in queryResults)
                 {
-                    results.Add(JObject.FromObject(document));
+                    results.Add(JObject.FromObject(document, _jsonSerializerOptions));
                 }
 
                 sqlQueryResults.Items = results;

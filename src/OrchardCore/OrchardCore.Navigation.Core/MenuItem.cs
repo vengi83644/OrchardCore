@@ -1,7 +1,7 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using Newtonsoft.Json;
 using OrchardCore.Security.Permissions;
 
 namespace OrchardCore.Navigation
@@ -14,9 +14,9 @@ namespace OrchardCore.Navigation
     {
         public MenuItem()
         {
-            Permissions = new List<Permission>();
-            Classes = new List<string>();
-            Items = new List<MenuItem>();
+            Permissions = [];
+            Classes = [];
+            Items = [];
             LinkToFirstChild = true;
         }
 
@@ -35,6 +35,11 @@ namespace OrchardCore.Navigation
         /// based on <see cref="Url"/> or <see cref="RouteValues"/>.
         /// </summary>
         public string Href { get; set; }
+
+        /// <summary>
+        /// The html target of the menu item.
+        /// </summary>
+        public string Target { get; set; }
 
         /// <summary>
         /// The optional url the menu item should link to.

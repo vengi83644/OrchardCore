@@ -1,10 +1,5 @@
-using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
 using OrchardCore.Shortcodes.Providers;
 using OrchardCore.Shortcodes.Services;
-using Shortcodes;
-using Xunit;
 
 namespace OrchardCore.Tests.Modules.OrchardCore.Shortcodes
 {
@@ -20,10 +15,10 @@ namespace OrchardCore.Tests.Modules.OrchardCore.Shortcodes
         [InlineData("fr", "foo [locale en]bar[/locale][locale fr]far[/locale] baz", @"foo far baz")]
         public async Task ShouldProcess(string currentCulture, string text, string expected)
         {
-            CultureInfo.CurrentUICulture = new CultureInfo(currentCulture);
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(currentCulture);
 
             var localeProvider = new LocaleShortcodeProvider();
-            var processor = new ShortcodeService(new IShortcodeProvider[] { localeProvider }, Enumerable.Empty<IShortcodeContextProvider>());
+            var processor = new ShortcodeService(new IShortcodeProvider[] { localeProvider }, []);
             var processed = await processor.ProcessAsync(text);
 
             Assert.Equal(expected, processed);

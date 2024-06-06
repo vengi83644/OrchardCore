@@ -1,13 +1,12 @@
-using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
 namespace OrchardCore.Workflows
 {
-    public class AdminMenu : INavigationProvider
+    public sealed class AdminMenu : INavigationProvider
     {
-        private readonly IStringLocalizer S;
+        internal readonly IStringLocalizer S;
 
         public AdminMenu(IStringLocalizer<AdminMenu> localizer)
         {
@@ -16,15 +15,19 @@ namespace OrchardCore.Workflows
 
         public Task BuildNavigationAsync(string name, NavigationBuilder builder)
         {
-            if (!string.Equals(name, "admin", StringComparison.OrdinalIgnoreCase))
+            if (!NavigationHelper.IsAdminMenu(name))
             {
                 return Task.CompletedTask;
             }
 
-            builder.Add(S["Workflows"], NavigationConstants.AdminMenuWorkflowsPosition, workflow => workflow
-                .AddClass("workflows").Id("workflows").Action("Index", "WorkflowType", new { area = "OrchardCore.Workflows" })
+            builder
+                .Add(S["Workflows"], NavigationConstants.AdminMenuWorkflowsPosition, workflow => workflow
+                    .AddClass("workflows")
+                    .Id("workflows")
+                    .Action("Index", "WorkflowType", "OrchardCore.Workflows")
                     .Permission(Permissions.ManageWorkflows)
-                    .LocalNav());
+                    .LocalNav()
+                );
 
             return Task.CompletedTask;
         }

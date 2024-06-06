@@ -38,7 +38,7 @@ A recipe file should look like this:
     Recipes, despite being JSON files, may contain comments:
     ```json
     // This is a comment.
-    ```
+```
 
 ## Recipe steps
 
@@ -319,6 +319,9 @@ The Roles step allows you to set permissions to specific roles.
     }
 ```
 
+!!! warning
+    As of version 1.6, the default roles are no longer auto created. Setup recipe must define the default roles to be used. The `Roles` feature will automatically map all known permissions to the defined roles each time a feature is enabled.
+
 ### Template and AdminTemplate Step
 
 The Template and AdminTemplate steps allow you to create Liquid Templates.
@@ -463,9 +466,9 @@ Recipes can use script helpers like this:
 | Name | Description |
 | --- | --- |
 | `uuid()` | Generates a unique identifier for a content item. |
-| `base64(string)` | Decodes the specified string from Base64 encoding. Use https://www.base64-image.de/ to convert your files to base64. |
+| `base64(string)` | Decodes the specified string from Base64 encoding. Use <https://www.base64-image.de/> to convert your files to base64. |
 | `html(string)` | Decodes the specified string from HTML encoding. |
-| `gzip(string)` | Decodes the specified string from gzip/base64 encoding. Use http://www.txtwizard.net/compression to gzip your strings. |
+| `gzip(string)` | Decodes the specified string from gzip/base64 encoding. Use <http://www.txtwizard.net/compression> to gzip your strings. |
 
 ## Recipe Migrations
 
@@ -478,7 +481,7 @@ In your module or theme project, create a class that inherits from `OrchardCore.
 Here is an example of how initial and subsequent migrations can be authored. Use the `CreateAsync()` method to provide the very first migration that runs and ensure that this method always returns 1. Use the `UpdateFrom<version>Async()` to provide subsequent migrations; in this example, we have a migration that updates from version 1 to 2. The method names are case-sensitive and the naming convention must be followed for the migrations to be discovered and executed.
 
 ```csharp
-public class Migrations : DataMigration
+public sealed class Migrations : DataMigration
 {
     private readonly IRecipeMigrator _recipeMigrator;
 
@@ -560,3 +563,5 @@ And here are the migration recipes referenced in the code above:
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/qPCBgHQYz1g" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/A13Li0CblK8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/2c5pbXuJJb0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

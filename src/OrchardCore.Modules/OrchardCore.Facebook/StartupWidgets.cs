@@ -15,11 +15,11 @@ using OrchardCore.Modules;
 namespace OrchardCore.Facebook
 {
     [Feature(FacebookConstants.Features.Widgets)]
-    public class StartupWidgets : StartupBase
+    public sealed class StartupWidgets : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<IDataMigration, WidgetMigrations>();
+            services.AddDataMigration<WidgetMigrations>();
             services.AddScoped<IShapeTableProvider, LiquidShapes>();
 
             services.AddContentPart<FacebookPluginPart>()

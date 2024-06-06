@@ -9,11 +9,10 @@ using OrchardCore.Workflows.Helpers;
 namespace OrchardCore.Users.Workflows
 {
     [RequireFeatures("OrchardCore.Workflows")]
-    public class Startup : StartupBase
+    public sealed class Startup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {
-            services.AddActivity<RegisterUserTask, RegisterUserTaskDisplayDriver>();
             services.AddActivity<UserCreatedEvent, UserCreatedEventDisplayDriver>();
             services.AddActivity<UserDeletedEvent, UserDeletedEventDisplayDriver>();
             services.AddActivity<UserEnabledEvent, UserEnabledEventDisplayDriver>();
@@ -23,6 +22,15 @@ namespace OrchardCore.Users.Workflows
             services.AddScoped<IUserEventHandler, UserEventHandler>();
             services.AddActivity<AssignUserRoleTask, AssignUserRoleTaskDisplayDriver>();
             services.AddActivity<ValidateUserTask, ValidateUserTaskDisplayDriver>();
+        }
+    }
+
+    [RequireFeatures("OrchardCore.Workflows", "OrchardCore.Email")]
+    public sealed class EmailWorkflowStartup : StartupBase
+    {
+        public override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddActivity<RegisterUserTask, RegisterUserTaskDisplayDriver>();
         }
     }
 }

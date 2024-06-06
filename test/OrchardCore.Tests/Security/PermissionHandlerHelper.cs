@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 
@@ -10,7 +5,7 @@ namespace OrchardCore.Tests.Security
 {
     public static class PermissionHandlerHelper
     {
-        public static AuthorizationHandlerContext CreateTestAuthorizationHandlerContext(Permission required, string[] allowed = null, bool authenticated = false)
+        public static AuthorizationHandlerContext CreateTestAuthorizationHandlerContext(Permission required, string[] allowed = null, bool authenticated = false, object resource = null)
         {
             var identity = authenticated ? new ClaimsIdentity("Test") : new ClaimsIdentity();
 
@@ -29,7 +24,7 @@ namespace OrchardCore.Tests.Security
             return new AuthorizationHandlerContext(
                 new[] { new PermissionRequirement(required) },
                 principal,
-                null);
+                resource);
         }
 
         public static async Task SuccessAsync(this AuthorizationHandlerContext context, params string[] permissionNames)
@@ -38,7 +33,7 @@ namespace OrchardCore.Tests.Security
             await handler.HandleAsync(context);
         }
 
-        private class FakePermissionHandler : AuthorizationHandler<PermissionRequirement>
+        private sealed class FakePermissionHandler : AuthorizationHandler<PermissionRequirement>
         {
             private readonly HashSet<string> _permissionNames;
 

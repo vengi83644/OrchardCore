@@ -6,7 +6,7 @@ using OrchardCore.Modules;
 namespace OrchardCore.Forms.GraphQL
 {
     [RequireFeatures("OrchardCore.Apis.GraphQL")]
-    public class Startup : StartupBase
+    public sealed class Startup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {
@@ -20,7 +20,7 @@ namespace OrchardCore.Forms.GraphQL
             services.AddObjectGraphType<ValidationPart, ValidationPartQueryObjectType>();
 
             // Broken
-            //services.AddGraphQLQueryType<ValidationSummaryPart, ValidationSummaryPartQueryObjectType>();
+            // services.AddGraphQLQueryType<ValidationSummaryPart, ValidationSummaryPartQueryObjectType>();
         }
     }
 }

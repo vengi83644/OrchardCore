@@ -17,10 +17,7 @@ namespace OrchardCore.Navigation
 
         public NavigationItemBuilder(MenuItem existingItem)
         {
-            if (existingItem == null)
-            {
-                throw new ArgumentNullException(nameof(existingItem));
-            }
+            ArgumentNullException.ThrowIfNull(existingItem);
 
             _item = existingItem;
         }
@@ -49,6 +46,13 @@ namespace OrchardCore.Navigation
             return this;
         }
 
+        public NavigationItemBuilder Target(string target)
+        {
+            _item.Target = target;
+            
+            return this;
+        }
+
         public NavigationItemBuilder Culture(string culture)
         {
             _item.Culture = culture;
@@ -64,14 +68,17 @@ namespace OrchardCore.Navigation
         public NavigationItemBuilder AddClass(string className)
         {
             if (!_item.Classes.Contains(className))
+            {
                 _item.Classes.Add(className);
+            }
+
             return this;
         }
 
         public NavigationItemBuilder RemoveClass(string className)
         {
-            if (_item.Classes.Contains(className))
-                _item.Classes.Remove(className);
+            _item.Classes.Remove(className);
+
             return this;
         }
 
@@ -114,7 +121,7 @@ namespace OrchardCore.Navigation
         public override List<MenuItem> Build()
         {
             _item.Items = base.Build();
-            return new List<MenuItem> { _item };
+            return [_item];
         }
 
         public NavigationItemBuilder Action(RouteValueDictionary values)
@@ -146,18 +153,27 @@ namespace OrchardCore.Navigation
 
         public NavigationItemBuilder Action(string actionName, string controllerName, string areaName)
         {
-            return Action(actionName, controllerName, areaName, new RouteValueDictionary());
+            return Action(actionName, controllerName, areaName, []);
         }
 
         public NavigationItemBuilder Action(string actionName, string controllerName, string areaName, RouteValueDictionary values)
         {
             _item.RouteValues = new RouteValueDictionary(values);
             if (!string.IsNullOrEmpty(actionName))
+            {
                 _item.RouteValues["action"] = actionName;
+            }
+
             if (!string.IsNullOrEmpty(controllerName))
+            {
                 _item.RouteValues["controller"] = controllerName;
+            }
+
             if (!string.IsNullOrEmpty(areaName))
+            {
                 _item.RouteValues["area"] = areaName;
+            }
+
             return this;
         }
     }

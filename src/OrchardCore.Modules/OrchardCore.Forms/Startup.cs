@@ -4,14 +4,18 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Descriptors;
+using OrchardCore.Forms.Activities;
+using OrchardCore.Forms.Activities.Drivers;
 using OrchardCore.Forms.Drivers;
 using OrchardCore.Forms.Filters;
 using OrchardCore.Forms.Models;
 using OrchardCore.Modules;
+using OrchardCore.Workflows.Helpers;
 
 namespace OrchardCore.Forms
 {
-    public class Startup : StartupBase
+    public sealed class Startup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {
@@ -73,6 +77,16 @@ namespace OrchardCore.Forms
                     .UseDisplayDriver<FormElementValidationPartDisplayDriver>();
 
             services.AddDataMigration<Migrations>();
+            services.AddScoped<IShapeTableProvider, FormShapeTableProvider>();
+        }
+    }
+
+    [RequireFeatures("OrchardCore.Workflows")]
+    public sealed class WorkflowStartup : StartupBase
+    {
+        public override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddActivity<HttpRedirectToFormLocationTask, HttpRedirectToFormLocationTaskDisplayDriver>();
         }
     }
 }

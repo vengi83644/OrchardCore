@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using OrchardCore.Entities;
 using OrchardCore.Facebook.Login.Settings;
 using OrchardCore.Settings;
 
@@ -14,17 +14,13 @@ namespace OrchardCore.Facebook.Login.Services
     {
         private readonly ISiteService _siteService;
 
-        public FacebookLoginService(
-            ISiteService siteService)
+        public FacebookLoginService(ISiteService siteService)
         {
             _siteService = siteService;
         }
 
-        public async Task<FacebookLoginSettings> GetSettingsAsync()
-        {
-            var container = await _siteService.GetSiteSettingsAsync();
-            return container.As<FacebookLoginSettings>();
-        }
+        public Task<FacebookLoginSettings> GetSettingsAsync()
+            => _siteService.GetSettingsAsync<FacebookLoginSettings>();
 
         public async Task<FacebookLoginSettings> LoadSettingsAsync()
         {
@@ -34,22 +30,16 @@ namespace OrchardCore.Facebook.Login.Services
 
         public async Task UpdateSettingsAsync(FacebookLoginSettings settings)
         {
-            if (settings == null)
-            {
-                throw new ArgumentNullException(nameof(settings));
-            }
+            ArgumentNullException.ThrowIfNull(settings);
 
             var container = await _siteService.LoadSiteSettingsAsync();
-            container.Properties[nameof(FacebookLoginSettings)] = JObject.FromObject(settings);
+            container.Properties[nameof(FacebookLoginSettings)] = JObject.FromObject(settings, JOptions.Default);
             await _siteService.UpdateSiteSettingsAsync(container);
         }
 
         public Task<IEnumerable<ValidationResult>> ValidateSettingsAsync(FacebookLoginSettings settings)
         {
-            if (settings == null)
-            {
-                throw new ArgumentNullException(nameof(settings));
-            }
+            ArgumentNullException.ThrowIfNull(settings);
 
             var results = ImmutableArray.CreateBuilder<ValidationResult>();
             return Task.FromResult<IEnumerable<ValidationResult>>(results);

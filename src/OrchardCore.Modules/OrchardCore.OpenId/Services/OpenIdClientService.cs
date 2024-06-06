@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Localization;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using Newtonsoft.Json.Linq;
-using OrchardCore.Entities;
 using OrchardCore.OpenId.Settings;
 using OrchardCore.Settings;
 
@@ -14,7 +13,8 @@ namespace OrchardCore.OpenId.Services
     public class OpenIdClientService : IOpenIdClientService
     {
         private readonly ISiteService _siteService;
-        private readonly IStringLocalizer S;
+
+        protected readonly IStringLocalizer S;
 
         public OpenIdClientService(
             ISiteService siteService,
@@ -24,11 +24,8 @@ namespace OrchardCore.OpenId.Services
             S = stringLocalizer;
         }
 
-        public async Task<OpenIdClientSettings> GetSettingsAsync()
-        {
-            var container = await _siteService.GetSiteSettingsAsync();
-            return container.As<OpenIdClientSettings>();
-        }
+        public Task<OpenIdClientSettings> GetSettingsAsync()
+            => _siteService.GetSettingsAsync<OpenIdClientSettings>();
 
         public async Task<OpenIdClientSettings> LoadSettingsAsync()
         {
@@ -38,10 +35,7 @@ namespace OrchardCore.OpenId.Services
 
         public async Task UpdateSettingsAsync(OpenIdClientSettings settings)
         {
-            if (settings == null)
-            {
-                throw new ArgumentNullException(nameof(settings));
-            }
+            ArgumentNullException.ThrowIfNull(settings);
 
             var container = await _siteService.LoadSiteSettingsAsync();
             container.Properties[nameof(OpenIdClientSettings)] = JObject.FromObject(settings);
@@ -50,10 +44,7 @@ namespace OrchardCore.OpenId.Services
 
         public Task<ImmutableArray<ValidationResult>> ValidateSettingsAsync(OpenIdClientSettings settings)
         {
-            if (settings == null)
-            {
-                throw new ArgumentNullException(nameof(settings));
-            }
+            ArgumentNullException.ThrowIfNull(settings);
 
             var results = ImmutableArray.CreateBuilder<ValidationResult>();
 
@@ -71,7 +62,7 @@ namespace OrchardCore.OpenId.Services
                     nameof(settings.Authority)
                 }));
             }
-            else if (!String.IsNullOrEmpty(settings.Authority.Query) || !String.IsNullOrEmpty(settings.Authority.Fragment))
+            else if (!string.IsNullOrEmpty(settings.Authority.Query) || !string.IsNullOrEmpty(settings.Authority.Fragment))
             {
                 results.Add(new ValidationResult(S["The authority cannot contain a query string or a fragment."], new[]
                 {
@@ -79,7 +70,7 @@ namespace OrchardCore.OpenId.Services
                 }));
             }
 
-            if (String.IsNullOrEmpty(settings.ResponseType))
+            if (string.IsNullOrEmpty(settings.ResponseType))
             {
                 results.Add(new ValidationResult(S["The response type cannot be null or empty."], new[]
                 {
@@ -96,7 +87,7 @@ namespace OrchardCore.OpenId.Services
                 }));
             }
 
-            if (String.IsNullOrEmpty(settings.ResponseMode))
+            if (string.IsNullOrEmpty(settings.ResponseMode))
             {
                 results.Add(new ValidationResult(S["The response mode cannot be null or empty."], new[]
                 {

@@ -1,15 +1,20 @@
-using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.CustomSettings.Services;
+using OrchardCore.Mvc.Utilities;
 using OrchardCore.Navigation;
 
 namespace OrchardCore.CustomSettings
 {
-    public class AdminMenu : INavigationProvider
+    public sealed class AdminMenu : INavigationProvider
     {
+        private static readonly ConcurrentDictionary<string, RouteValueDictionary> _routeValues = [];
+
         private readonly CustomSettingsService _customSettingsService;
-        private readonly IStringLocalizer S;
+
+        internal readonly IStringLocalizer S;
 
         public AdminMenu(
             IStringLocalizer<AdminMenu> localizer,
@@ -19,27 +24,42 @@ namespace OrchardCore.CustomSettings
             _customSettingsService = customSettingsService;
         }
 
-        public Task BuildNavigationAsync(string name, NavigationBuilder builder)
+        public async Task BuildNavigationAsync(string name, NavigationBuilder builder)
         {
-            if (!String.Equals(name, "admin", StringComparison.OrdinalIgnoreCase))
+            if (!NavigationHelper.IsAdminMenu(name))
             {
-                return Task.CompletedTask;
+                return;
             }
 
-            foreach (var type in _customSettingsService.GetAllSettingsTypes())
+            foreach (var type in await _customSettingsService.GetAllSettingsTypesAsync())
             {
+                if (!_routeValues.TryGetValue(type.Name, out var routeValues))
+                {
+                    routeValues = new RouteValueDictionary()
+                    {
+                         { "area", "OrchardCore.Settings" },
+                         { "groupId", type.Name },
+                    };
+
+                    _routeValues[type.Name] = routeValues;
+                }
+
+                var htmlName = type.Name.HtmlClassify();
+
                 builder
                     .Add(S["Configuration"], configuration => configuration
                         .Add(S["Settings"], settings => settings
                             .Add(new LocalizedString(type.DisplayName, type.DisplayName), type.DisplayName.PrefixPosition(), layers => layers
-                                .Action("Index", "Admin", new { area = "OrchardCore.Settings", groupId = type.Name })
+                                .Action("Index", "Admin", routeValues)
+                                .AddClass(htmlName)
+                                .Id(htmlName)
                                 .Permission(Permissions.CreatePermissionForType(type))
                                 .Resource(type.Name)
                                 .LocalNav()
-                            )));
+                            )
+                        )
+                    );
             }
-
-            return Task.CompletedTask;
         }
     }
 }

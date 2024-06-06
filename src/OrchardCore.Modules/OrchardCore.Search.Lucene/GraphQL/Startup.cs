@@ -6,10 +6,10 @@ using OrchardCore.Queries.Lucene.GraphQL.Queries;
 namespace OrchardCore.Search.Lucene.GraphQL
 {
     /// <summary>
-    /// These services are registered on the tenant service collection
+    /// These services are registered on the tenant service collection.
     /// </summary>
-    [RequireFeatures("OrchardCore.Apis.GraphQL")]
-    public class Startup : StartupBase
+    [RequireFeatures("OrchardCore.Apis.GraphQL", "OrchardCore.Queries")]
+    public sealed class Startup : StartupBase
     {
         public override void ConfigureServices(IServiceCollection services)
         {

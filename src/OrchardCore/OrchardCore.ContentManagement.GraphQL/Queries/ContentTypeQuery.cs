@@ -21,7 +21,7 @@ namespace OrchardCore.ContentManagement.GraphQL.Queries
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IOptions<GraphQLContentOptions> _contentOptionsAccessor;
         private readonly IOptions<GraphQLSettings> _settingsAccessor;
-        private readonly IStringLocalizer S;
+        protected readonly IStringLocalizer S;
 
         public ContentTypeQuery(IHttpContextAccessor httpContextAccessor,
             IOptions<GraphQLContentOptions> contentOptionsAccessor,
@@ -40,16 +40,16 @@ namespace OrchardCore.ContentManagement.GraphQL.Queries
             return contentDefinitionManager.GetIdentifierAsync();
         }
 
-        public Task BuildAsync(ISchema schema)
+        public async Task BuildAsync(ISchema schema)
         {
             var serviceProvider = _httpContextAccessor.HttpContext.RequestServices;
 
             var contentDefinitionManager = serviceProvider.GetService<IContentDefinitionManager>();
             var contentTypeBuilders = serviceProvider.GetServices<IContentTypeBuilder>().ToList();
 
-            foreach (var typeDefinition in contentDefinitionManager.ListTypeDefinitions())
+            foreach (var typeDefinition in await contentDefinitionManager.ListTypeDefinitionsAsync())
             {
-                if (_contentOptionsAccessor.Value.ShouldSkipContentType(typeDefinition.Name))
+                if (_contentOptionsAccessor.Value.ShouldHide(typeDefinition))
                 {
                     continue;
                 }
@@ -72,11 +72,11 @@ namespace OrchardCore.ContentManagement.GraphQL.Queries
 
                 foreach (var builder in contentTypeBuilders)
                 {
-                    builder.Build(query, typeDefinition, typeType);
+                    builder.Build(schema, query, typeDefinition, typeType);
                 }
 
-                // Only add queries over standard content types
-                if (!typeDefinition.HasStereotype())
+                // Limit queries to standard content types or those content types that are explicitly configured.
+                if (!typeDefinition.TryGetStereotype(out var stereotype) || _contentOptionsAccessor.Value.DiscoverableSterotypes.Contains(stereotype))
                 {
                     schema.Query.AddField(query);
                 }
@@ -85,14 +85,17 @@ namespace OrchardCore.ContentManagement.GraphQL.Queries
                     // Register the content item type explicitly since it won't be discovered from the root 'query' type.
                     schema.RegisterType(typeType);
                 }
+
+                if (!string.IsNullOrEmpty(stereotype))
+                {
+                    typeType.Metadata["Stereotype"] = stereotype;
+                }
             }
 
             foreach (var builder in contentTypeBuilders)
             {
                 builder.Clear();
             }
-
-            return Task.CompletedTask;
         }
     }
 }

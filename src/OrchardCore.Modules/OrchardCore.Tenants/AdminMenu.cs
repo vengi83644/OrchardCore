@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Environment.Shell;
@@ -6,10 +5,11 @@ using OrchardCore.Navigation;
 
 namespace OrchardCore.Tenants
 {
-    public class AdminMenu : INavigationProvider
+    public sealed class AdminMenu : INavigationProvider
     {
         private readonly ShellSettings _shellSettings;
-        private readonly IStringLocalizer S;
+
+        internal readonly IStringLocalizer S;
 
         public AdminMenu(IStringLocalizer<AdminMenu> localizer, ShellSettings shellSettings)
         {
@@ -19,7 +19,7 @@ namespace OrchardCore.Tenants
 
         public Task BuildNavigationAsync(string name, NavigationBuilder builder)
         {
-            if (!String.Equals(name, "admin", StringComparison.OrdinalIgnoreCase))
+            if (!NavigationHelper.IsAdminMenu(name))
             {
                 return Task.CompletedTask;
             }
@@ -31,14 +31,15 @@ namespace OrchardCore.Tenants
             }
 
             builder
-                .Add(S["Configuration"], configuration => configuration
-                    .AddClass("menu-configuration").Id("configuration")
+                .Add(S["Multi-Tenancy"], "after", tenancy => tenancy
+                    .AddClass("menu-multitenancy")
+                    .Id("multitenancy")
                     .Add(S["Tenants"], S["Tenants"].PrefixPosition(), tenant => tenant
-                        .Action("Index", "Admin", new { area = "OrchardCore.Tenants" })
+                        .Action("Index", "Admin", "OrchardCore.Tenants")
                         .Permission(Permissions.ManageTenants)
                         .LocalNav()
-                    )
-                );
+                    ),
+                    priority: 1);
 
             return Task.CompletedTask;
         }
